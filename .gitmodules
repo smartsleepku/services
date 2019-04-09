@@ -1,0 +1,15 @@
+[submodule "notify"]
+	path = notify
+	url = git@github.com:smartsleep/notify.git
+[submodule "proxy"]
+	path = proxy
+	url = git@github.com:smartsleep/proxy.git
+[submodule "activity"]
+	path = activity
+	url = git@github.com:smartsleep/activity.git
+[submodule "auth"]
+	path = auth
+	url = git@github.com:smartsleep/auth.git
+[submodule "limesurvey"]
+	path = limesurvey
+	url = git@github.com:smartsleep/limesurvey.git
