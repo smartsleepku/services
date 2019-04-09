@@ -1,0 +1,113 @@
+---
+version: '3.1'
+
+services:
+
+  db:
+    image: mongo:xenial
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: oJuwu7Tohquaongoh9Nooz9vaThaeche
+    volumes:
+      - './data:/data'
+    ports:
+      - "27017:27017"
+    networks:
+      - development
+      
+  sql:
+    image: mysql:5.5
+    environment:
+      - MYSQL_DATABASES=smartsleep
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_HOST=127.0.0.1
+      - MYSQL_PORT=33306
+      - MYSQL_USER=smartsleep
+      - MYSQL_PASSWORD=Eingee7ooco7jaewoh5Suuy7sha3thae
+      - MYSQL_MY_DATABASE=smartsleep
+    ports:
+      - "33306:3306"
+    volumes:
+      - "./data:/var/lib/mysql"
+    networks:
+      - development
+  
+  auth:
+    image: humboldt.cyborch.com:5000/ku/sund/smartsleep/auth:latest
+    build:
+      context: ./auth
+    environment:
+      - NODE_ENV=development
+      - CONFIG_ENV=development
+    depends_on:
+      - db
+    ports:
+      - "3000:3000"
+    networks:
+      - development
+  
+  proxy:
+    image: humboldt.cyborch.com:5000/ku/sund/smartsleep/proxy:latest
+    build:
+      context: ./proxy
+    depends_on:
+      - auth
+      - activity
+      - survey
+    ports:
+      - "8080:8080"
+    networks:
+      - development
+  
+  activity:
+    image: humboldt.cyborch.com:5000/ku/sund/smartsleep/activity:latest
+    build:
+      context: ./activity
+    entrypoint: /opt/app/bin/development.sh
+    volumes:
+      - ./activity:/opt/app
+    depends_on:
+      - db
+    networks:
+      - development
+    secrets:
+      - source: activitydb
+        target: database.properties
+  
+  survey:
+    image: humboldt.cyborch.com:5000/limesurvey:latest
+    build:
+      context: ./limesurvey
+    depends_on:
+      - sql
+    networks:
+      - development
+    secrets:
+      - source: limeconfig
+        target: config.php
+  
+  notify:
+    image: humboldt.cyborch.com:5000/ku/sund/smartsleep/notify:latest
+    build:
+      context: ./notify
+    depends_on:
+      - db
+    networks:
+      - development
+    secrets:
+      - source: fbadminsdk
+        target: firebase-adminsdk.json
+      - source: activitydb
+        target: database.properties
+
+networks:
+  development:
+
+secrets:
+  activitydb:
+    file: ./activity/secrets/database-development.properties
+  fbadminsdk:
+    file: .secrets/firebase-adminsdk.json
+  limeconfig:
+    file: ./secrets/config-development.php
+

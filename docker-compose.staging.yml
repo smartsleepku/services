@@ -1,0 +1,60 @@
+---
+version: '3.1'
+
+services:
+
+  auth:
+    image: humboldt.cyborch.com:5000/ku/sund/smartsleep/auth:latest
+    environment:
+      - NODE_ENV=production
+      - CONFIG_ENV=production
+    networks:
+      - production
+  
+  proxy:
+    image: humboldt.cyborch.com:5000/ku/sund/smartsleep/proxy:latest
+    depends_on:
+      - auth
+      - activity
+    ports:
+      - "20974:8080" # 0x51ee (sleep)
+    networks:
+      - production
+  
+  activity:
+    image: humboldt.cyborch.com:5000/ku/sund/smartsleep/activity:latest
+    networks:
+      - production
+    secrets:
+      - source: activitydb
+        target: database.properties
+
+  survey:
+    image: humboldt.cyborch.com:5000/limesurvey:latest
+    networks:
+      - production
+    secrets:
+      - source: limeconfig
+        target: config.php
+
+  notify:
+    image: humboldt.cyborch.com:5000/ku/sund/smartsleep/notify:latest
+    networks:
+      - production
+    secrets:
+      - source: fbadminsdk
+        target: firebase-adminsdk.json
+      - source: activitydb
+        target: database.properties
+
+
+networks:
+  production:
+
+secrets:
+  activitydb:
+    file: ./activity/secrets/database-staging.properties
+  fbadminsdk:
+    file: ./secrets/firebase-adminsdk.json
+  limeconfig:
+    file: ./secrets/config-staging.php
