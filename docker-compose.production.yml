@@ -4,7 +4,9 @@ version: '3.1'
 services:
 
   auth:
-    image: humboldt.cyborch.com:5000/ku/sund/smartsleep/auth:latest
+    image: ku/sund/smartsleep/auth:latest
+    build:
+      context: ./auth
     environment:
       - NODE_ENV=production
       - CONFIG_ENV=production
@@ -12,7 +14,9 @@ services:
       - production
   
   activity:
-    image: humboldt.cyborch.com:5000/ku/sund/smartsleep/activity:latest
+    image: ku/sund/smartsleep/activity:latest
+    build:
+      context: ./activity
     networks:
       - production
     secrets:
@@ -20,7 +24,11 @@ services:
         target: database.properties
 
   survey:
-    image: humboldt.cyborch.com:5000/limesurvey:latest
+    image: limesurvey:latest
+    build:
+      context: ./limesurvey
+    ports:
+      - "8081:80"
     networks:
       - production
     secrets:
@@ -28,7 +36,9 @@ services:
         target: config.php
 
   notify:
-    image: humboldt.cyborch.com:5000/ku/sund/smartsleep/notify:latest
+    image: ku/sund/smartsleep/notify:latest
+    build:
+      context: ./notify
     networks:
       - production
     secrets:
@@ -36,6 +46,19 @@ services:
         target: firebase-adminsdk.json
       - source: activitydb
         target: database.properties
+
+  proxy:
+    image: ku/sund/smartsleep/proxy:latest
+    build:
+      context: ./proxy
+    depends_on:
+      - auth
+      - activity
+      - survey
+    ports:
+      - "8080:8080"
+    networks:
+      - production
 
 
 networks:
