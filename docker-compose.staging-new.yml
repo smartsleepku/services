@@ -1,0 +1,100 @@
+---
+version: '3.1'
+
+services:
+
+  db:
+    image: mongo:xenial
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: oJuwu7Tohquaongoh9Nooz9vaThaeche
+    volumes:
+      - './data:/data'
+    ports:
+      - "27017:27017"
+    networks:
+      - production
+
+  auth:
+    image: ku/sund/smartsleep/auth:latest
+    build:
+      context: ./auth
+    environment:
+      - NODE_ENV=production
+      - CONFIG_ENV=production
+    networks:
+      - production
+
+  sql:
+    image: mysql:5.5
+    environment:
+      - MYSQL_DATABASES=smartsleep
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_HOST=127.0.0.1
+      - MYSQL_PORT=3306
+    ports:
+      - "33306:3306"
+    volumes:
+      - "./data:/var/lib/mysql"
+    networks:
+      - production
+
+  activity:
+    image: ku/sund/smartsleep/activity:latest
+    build:
+      context: ./activity
+    networks:
+      - production
+    secrets:
+      - source: activitydb
+        target: database.properties
+
+  survey:
+    image: limesurvey:latest
+    build:
+      context: ./limesurvey
+    ports:
+      - "8081:80"
+    networks:
+      - production
+    secrets:
+      - source: limeconfig
+        target: config.php
+
+  notify:
+    image: ku/sund/smartsleep/notify:latest
+    build:
+      context: ./notify
+    networks:
+      - production
+    secrets:
+      - source: fbadminsdk
+        target: firebase-adminsdk.json
+      - source: activitydb
+        target: database.properties
+
+  proxy:
+    image: ku/sund/smartsleep/proxy:latest
+    build:
+      context: ./proxy
+      dockerfile: Dockerfile
+    depends_on:
+      - auth
+      - activity
+      - survey
+    ports:
+      - "18080:8080"
+    networks:
+      - production
+
+
+networks:
+  production:
+
+secrets:
+  activitydb:
+    file: ./activity/secrets/database-production.properties
+  fbadminsdk:
+    file: ./secrets/firebase-adminsdk.json
+  limeconfig:
+    file: ./secrets/config-production.php
