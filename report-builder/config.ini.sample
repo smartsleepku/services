@@ -1,0 +1,5 @@
+[db]
+host = <domain>
+username = <username>
+password = <password>
+port = 27017

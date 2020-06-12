@@ -1,0 +1,26 @@
+---
+version: '3.1'
+
+services:
+
+  builder:
+    image: smartsleep-report-generator
+    build:
+      context: ./report-builder
+    volumes:
+      - "/localhome/{{ ansible_user }}/ssreports:/reports"
+    secrets:
+      - db_config
+
+  webserver:
+    image: smartsleep-report-webserver
+    build:
+      context: ./report-server
+    volumes:
+      - "/localhome/{{ ansible_user }}/ssreports:/usr/share/nginx/html/reports:ro"
+    ports:
+      - 8082:80
+
+secrets:
+  db_config:
+    external: true

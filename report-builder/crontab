@@ -1,0 +1,2 @@
+00 18 * * 1 root /bin/bash /opt/build-report
+# empty line needed here
