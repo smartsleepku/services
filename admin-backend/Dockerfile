@@ -12,13 +12,9 @@ RUN DEBIAN_FRONTEND=noninteractive \
 RUN mkdir -p $VIRTUAL_ENV
 RUN python3.8 -m venv $VIRTUAL_ENV
 
-# copy entrypoint.sh
-COPY ./entrypoint.sh /usr/src/app/entrypoint.sh
-COPY . /usr/src/app/
-
+COPY ./requirements.txt /usr/src/app/
 WORKDIR /usr/src/app
-
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
-
-ENTRYPOINT ["/usr/src/app/entrypoint.sh"]
+COPY . /usr/src/app/
+CMD python

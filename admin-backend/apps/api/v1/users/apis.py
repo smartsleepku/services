@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -6,6 +8,8 @@ from apps.users.models import User
 from django.conf import settings
 from celery.decorators import task
 import sys, traceback
+
+logger = logging.getLogger(__name__)
 
 @task(bind=True, name="usertask")
 def usertask(self, amount, csv_out_dir,survey_base, survey_uname, survey_pwd, survey_id):
@@ -19,7 +23,7 @@ def create_users(request, amount):
                 settings.CSV_OUT_DIR,
                 settings.LIMESURVEY_BASE,
                 settings.LIMESURVEY_USR,
-                settings.LIMESURVEY_PWD, 
+                settings.LIMESURVEY_PWD,
                 settings.LIMESURVEY_SURVEY_ID
                 ]
             )
@@ -38,7 +42,7 @@ def delete_user(request, attendeecode):
         lime_opts = {
             'base':settings.LIMESURVEY_BASE,
             'user':settings.LIMESURVEY_USR,
-            'pwd':settings.LIMESURVEY_PWD, 
+            'pwd':settings.LIMESURVEY_PWD,
             'survey_id':settings.LIMESURVEY_SURVEY_ID
         }
         mysql_opts = {
@@ -48,14 +52,15 @@ def delete_user(request, attendeecode):
             'pwd' :settings.MYSQL_PWD
         }
         #User.testit(attendeecode)
-        User.delete_user(attendeecode, lime_opts, mysql_opts)
+        result = User.delete_user(attendeecode, lime_opts, mysql_opts)
     except:
         e = sys.exc_info()[0]
         print(e)
         traceback.print_exc()
-    return JsonResponse({})
-                
-                
-                
-    
+        result = False
+    return JsonResponse({'result': result})
+
+
+
+
 

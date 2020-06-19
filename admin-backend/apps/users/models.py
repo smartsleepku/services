@@ -1,3 +1,5 @@
+import logging
+
 #from django.db import models
 from djongo import models
 from django.utils.translation import ugettext_lazy as _
@@ -10,6 +12,8 @@ import json
 import sys, traceback
 import mysql.connector
 
+logger = logging.getLogger(__name__)
+
 class Activity(models.Model):
     _id = models.ObjectIdField(primary_key=True)
     userId = models.CharField(_("userId"), max_length=255, blank=False,default="")
@@ -17,11 +21,11 @@ class Activity(models.Model):
     confidence = models.IntegerField()
     time = models.DateTimeField(auto_now_add=True, blank=True)
     resting = models.BooleanField(default=True)
-    
+
     class Meta:
         db_table = "activities"
         managed=False
-    
+
     def __str__(self):
         return f'{self.userId},{self.time}'
 
@@ -36,7 +40,7 @@ class Attendeelog(models.Model):
     class Meta:
         db_table = "attendeelogs"
         managed=False
-    
+
     def __str__(self):
         return f'{self.userId},{self.weekdayMorning}'
 
@@ -53,14 +57,14 @@ class Attendee(models.Model):
     class Meta:
         db_table = "attendees"
         managed=False
-    
+
     def __str__(self):
         return f'{self.userId},{self.weekdayMorning}'
 
 
 class Debug(models.Model):
     _id = models.ObjectIdField(primary_key=True)
-    userId = models.CharField(_("userId"), max_length=255, blank=False,default="")    
+    userId = models.CharField(_("userId"), max_length=255, blank=False,default="")
     time = models.DateTimeField(auto_now_add=True, blank=True)
     model = models.CharField(_("model"), max_length=255, blank=False,default="")
     manufacturer = models.CharField(_("manufacturer"), max_length=255, blank=False,default="")
@@ -70,7 +74,7 @@ class Debug(models.Model):
     class Meta:
         db_table = "debugs"
         managed=False
-    
+
     def __str__(self):
         return f'{self.userId}:{self.model},{self.manufacturer},{self.systemName} {self.systemVersion}'
 
@@ -82,7 +86,7 @@ class HeartBeat(models.Model):
     class Meta:
         db_table = "heartbeats"
         managed=False
-    
+
     def __str__(self):
         return f'{self.userId}:{self.time}'
 
@@ -92,36 +96,36 @@ class Rest(models.Model):
     resting = models.BooleanField(default=True)
     startTime = models.DateTimeField(auto_now_add=True, blank=True)
     endTime = models.DateTimeField(auto_now_add=True, blank=True)
-    
+
     class Meta:
         db_table = "rests"
         managed=False
-    
+
     def __str__(self):
         return f'{self.userId}:{self.startTime} - {self.resting}'
 
 class Session(models.Model):
     _id = models.ObjectIdField(primary_key=True)
-    userId = models.CharField(_("userId"), max_length=255, blank=False,default="")    
+    userId = models.CharField(_("userId"), max_length=255, blank=False,default="")
     #__v = models.IntegerField()
 
     class Meta:
         db_table = "sessions"
         managed=False
-    
+
     def __str__(self):
         return f'{self.userId}'
 
 class Sleep(models.Model):
     _id = models.ObjectIdField(primary_key=True)
-    userId = models.CharField(_("userId"), max_length=255, blank=False,default="")    
+    userId = models.CharField(_("userId"), max_length=255, blank=False,default="")
     time = models.DateTimeField(auto_now_add=True, blank=True)
     sleeping = models.BooleanField(default=False)
 
     class Meta:
         db_table = "sleeps"
         managed=False
-    
+
     def __str__(self):
         return f'{self.userId}:{self.time} - {self.sleeping}'
 
@@ -134,7 +138,7 @@ class User(models.Model):
     class Meta:
         db_table = "users"
         managed=False
-    
+
     def __str__(self):
         return f'{self.pk}:{self.attendeeCode}'
 
@@ -156,9 +160,10 @@ class User(models.Model):
         r = json.loads(r.content)['result']
         if type(r)==dict and 'status' in r and r['status'] == 'No survey participants found.':
             return None
+        elif type(r)==dict and 'status' in r and r['status'] == 'Error: No survey participants table':
+            return None
         else:
-            token,= json.loads(r.content)['result']
-            return token['tid']
+            return r[0]['tid']
 
     @classmethod
     def delete_user(cls, attendeecode, survey_opts, mysql_opts):
@@ -179,10 +184,10 @@ class User(models.Model):
                 survey_opts['user'],\
                 survey_opts['pwd'],\
                 survey_opts['survey_id']
-            
+
             session_key = cls._get_limesurvey_sessionkey(survey_uname,survey_pwd,survey_base)
             cur.execute('use smartsleep')
-            
+
             cur.execute(f'SELECT id FROM lime_survey_{survey_id} where token="{str(user.pk)}"')
             response_id = cur.fetchone()
             if response_id != None:
@@ -192,7 +197,7 @@ class User(models.Model):
 
             tkn_id = cls.retrieve_token_id(str(user.pk) ,session_key, survey_id, survey_base)
             if tkn_id != None:
-                r = cls._query_lime_survey(survey_base, "delete_participants", 
+                r = cls._query_lime_survey(survey_base, "delete_participants",
                     {'sSessionKey':session_key, 'iSurveyID':survey_id, 'aTokenIDs':[tkn_id]})
             cls._release_limesurvey_sessionkey(session_key,survey_base)
             cur.close()
@@ -212,14 +217,15 @@ class User(models.Model):
             e = sys.exc_info()[0]
             print(e)
             traceback.print_exc()
+            return False
         return True
-            
+
     @classmethod
     def _get_limesurvey_sessionkey(cls,survey_uname,survey_pwd,survey_base):
         '''
         Obtain session key to work with limesurvey
         '''
-        r =cls._query_lime_survey(survey_base, "get_session_key", 
+        r = cls._query_lime_survey(survey_base, "get_session_key",
         {'username':survey_uname,'password':survey_pwd})
         session_key = json.loads(r.content)['result']
         return session_key
@@ -272,7 +278,7 @@ class User(models.Model):
         survey_uname <str> : e.g. admin
         survey_pwd   <str> : e.g. admin
         survey_id    <int> : e.g. 765693
-        po           <obj> : celery progress_observer (optional). 
+        po           <obj> : celery progress_observer (optional).
                              If omitted, info is printed to std. out
         Output parameters:
         amount_created     <int>
@@ -280,7 +286,7 @@ class User(models.Model):
         '''
         class dummy_po(object):
             def update_state(self, state, meta):
-                print(state,meta)
+                print(state, meta)
         po = dummy_po() if po == None else po
 
         chunksize = 5000
@@ -289,7 +295,7 @@ class User(models.Model):
         else:
             runs = [chunksize]*int(np.floor(amount/chunksize)) + \
             ([amount%chunksize] if amount%chunksize!=0 else [])
-        
+
         total_tasks = 9*len(runs)
         progress = lambda c,m:{"state":'PROGRESS', "meta":{'current': c, 'total': total_tasks,'msg':m}}
         task_cnt = 0
@@ -341,4 +347,3 @@ class User(models.Model):
         }
 
 
-    

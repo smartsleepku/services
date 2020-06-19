@@ -1,4 +1,4 @@
 #!/bin/bash
 cd /opt
 /opt/conda/bin/jupyter nbconvert --execute --ExecutePreprocessor.timeout=600 --no-input --output-dir /reports --output `date +report_%y_%m_%d.html` /opt/analysis.ipynb &>> /var/log/cron.log
-chown 1003:1003 `date +/reports/report_%y_%m_%d.html`
+chown $USER_ID:$USER_ID `date +/reports/report_%y_%m_%d.html`

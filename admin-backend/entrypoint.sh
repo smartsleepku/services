@@ -10,9 +10,9 @@
 
 #     echo "PostgreSQL started"
 # fi
-#RUN python manage.py migrate
-CMD python manage.py runserver
 #python manage.py flush --no-input
+python manage.py makemigrations
+python manage.py migrate
 #python manage.py migrate
 #python manage.py collectstatic --no-input --clear
 

@@ -10,37 +10,44 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
+import configparser
 import os
+
+import django.core.management.utils
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+db_config = configparser.ConfigParser()
+db_config.read('/run/secrets/db_config')
+admin_config = configparser.ConfigParser()
+admin_config.read('/run/secrets/admin_config')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'sh4(a35t@8os@yu4+@@3=2kt$=mg=djpn3hpnjg*sh)b1)ly_q'
+SECRET_KEY = django.core.management.utils.get_random_secret_key()
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DJANGO_DEBUG") == 'True'
 
 ALLOWED_HOSTS = ['*']
 
-CSV_OUT_DIR = '/path/to/ssreports'
-CSV_DL_URL = 'http://<domain>/csvfiles'
-LIMESURVEY_BASE = 'http://localhost:8081'
-LIMESURVEY_PWD = 'admin'
-LIMESURVEY_USR = 'admin'
-LIMESURVEY_SURVEY_ID = <id>
-MYSQL_HOST = '127.0.0.1'
-MYSQL_PORT = 33306
-MYSQL_USER = "root"
-MYSQL_PWD  = "root"
+CSV_OUT_DIR = '/ssreports'
+CSV_DL_URL = os.environ.get("CSV_DL_URL")
+LIMESURVEY_BASE = 'http://survey'
+LIMESURVEY_PWD = admin_config['admin']['LIMESURVEY_PWD']
+LIMESURVEY_USR = admin_config['admin']['LIMESURVEY_USR']
+LIMESURVEY_SURVEY_ID = int(os.environ.get("LIMESURVEY_SURVEY_ID"))
+MYSQL_HOST = admin_config['admin']['MYSQL_HOST']
+MYSQL_PORT = int(admin_config['admin']['MYSQL_PORT'])
+MYSQL_USER = admin_config['admin']['MYSQL_USER']
+MYSQL_PWD  = admin_config['admin']['MYSQL_PWD']
 
 # CELERY STUFF
-BROKER_URL = 'redis://root:sOmE_sEcUrE_pAsS@localhost:6379'
-CELERY_RESULT_BACKEND = 'redis://root:sOmE_sEcUrE_pAsS@localhost:6379'
+BROKER_URL = os.environ.get("CELERY_BACKEND")
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_BACKEND")
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
@@ -100,20 +107,20 @@ DATABASES = {
             'NAME': 'smartsleep',
             'ENFORCE_SCHEMA': False,
             'CLIENT': {
-                'host': '127.0.0.1',
-                'port': 27017,
-                'username': 'admin',
-                'password': 'admin',
+                'host': db_config['db']['host'],
+                'port': int(db_config['db']['port']),
+                'username': db_config['db']['username'],
+                'password': db_config['db']['password'],
             },
-            'LOGGING': {
-                'version': 1,
-                'loggers': {
-                    'djongo': {
-                        'level': 'DEBUG', #INFO
-                        'propogate': False,
-                    }
-                },
-             },
+            # 'LOGGING': {
+            #     'version': 1,
+            #     'loggers': {
+            #         'djongo': {
+            #             'level': 'DEBUG', #INFO
+            #             'propagate': True,
+            #         }
+            #     },
+            #  },
         }
     }
 
