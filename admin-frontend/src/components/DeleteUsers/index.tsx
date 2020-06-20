@@ -26,6 +26,8 @@ const DeleteUsers: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [pName, setPname] = useState("");
   const [showCard, setShowCard] = useState(false);
+  const [isWaiting, setIsWaiting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const { handleSubmit, errors, register } = methods;
   let handleDialogClose = () => {
     setIsOpen(false);
@@ -37,18 +39,23 @@ const DeleteUsers: React.FC = () => {
   let handleDialogConfirm = () => {
     //console.log(pName);
     axios
-      .get<{ task_id: string }>(`/api/v1/users/delete/${pName}/`)
+      .get<{ result: boolean }>(`/api/v1/users/delete/${pName}/`)
       .then(function (response) {
         // handle success
         setShowCard(true);
         setIsOpen(false);
+        setIsWaiting(false);
+        setIsSuccess(response.data.result);
       })
       .catch(function (error) {
-        // handle error
+        setIsWaiting(false);
+        setIsSuccess(false);
       })
       .then(function () {
         // always executed
       });
+      setShowCard(true);
+      setIsWaiting(true);
   };
   return (
     <>
@@ -73,7 +80,15 @@ const DeleteUsers: React.FC = () => {
         </form>
         {showCard && (
           <Card>
-            <Text>{pName} got deleted</Text>
+            {isWaiting ? (
+              <>
+                <Text>Deleting...</Text>
+              </>
+            ) : isSuccess ? (
+              <Text>{pName} got deleted</Text>
+            ) : (
+              <Text>An error occured while trying to delete participant {pName}</Text>
+            )}
           </Card>
         )}
         <Dialog
