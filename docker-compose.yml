@@ -14,24 +14,21 @@ services:
       - "27017:27017"
     networks:
       - development
-      
+
   sql:
     image: mysql:5.5
     environment:
       - MYSQL_DATABASES=smartsleep
       - MYSQL_ROOT_PASSWORD=root
       - MYSQL_HOST=127.0.0.1
-      - MYSQL_PORT=33306
-      - MYSQL_USER=smartsleep
-      - MYSQL_PASSWORD=Eingee7ooco7jaewoh5Suuy7sha3thae
-      - MYSQL_MY_DATABASE=smartsleep
+      - MYSQL_PORT=3306
     ports:
       - "33306:3306"
     volumes:
       - "./data:/var/lib/mysql"
     networks:
       - development
-  
+
   auth:
     image: humboldt.cyborch.com:5000/ku/sund/smartsleep/auth:latest
     build:
@@ -45,7 +42,7 @@ services:
       - "3000:3000"
     networks:
       - development
-  
+
   proxy:
     image: humboldt.cyborch.com:5000/ku/sund/smartsleep/proxy:latest
     build:
@@ -58,7 +55,7 @@ services:
       - "18080:8080"
     networks:
       - development
-  
+
   activity:
     image: humboldt.cyborch.com:5000/ku/sund/smartsleep/activity:latest
     build:
@@ -73,7 +70,7 @@ services:
     secrets:
       - source: activitydb
         target: database.properties
-  
+
   survey:
     image: humboldt.cyborch.com:5000/limesurvey:latest
     build:
@@ -85,7 +82,7 @@ services:
     secrets:
       - source: limeconfig
         target: config.php
-  
+
   notify:
     image: humboldt.cyborch.com:5000/ku/sund/smartsleep/notify:latest
     build:
@@ -100,8 +97,92 @@ services:
       - source: activitydb
         target: database.properties
 
+  report-builder:
+    image: smartsleep-report-generator
+    build:
+      context: ./report-builder
+    environment:
+      - USER_ID=${REPORT_USER}
+    volumes:
+      - "${BASE_DIR}/ssreports:/reports"
+      - ./report-builder/config.ini:/run/secrets/db_config
+
+  report-webserver:
+    image: smartsleep-report-webserver
+    build:
+      context: ./report-server
+    volumes:
+      - "${BASE_DIR}/ssreports:/usr/share/nginx/html/reports:ro"
+    ports:
+      - 8082:80
+
+  admin-backend:
+    image: smartsleep-admin-backend
+    build:
+      context: ./admin-backend
+    command: python manage.py runserver 0.0.0.0:8000
+    environment:
+      - LIMESURVEY_SURVEY_ID=${LIMESURVEY_SURVEY_ID}
+      - CSV_DL_URL=${CSV_DL_URL}
+      - DJANGO_DEBUG=${DJANGO_DEBUG}
+    volumes:
+      - "${BASE_DIR}/ssreports:/ssreports"
+      - ./report-builder/config.ini:/run/secrets/db_config
+      - ./secrets/admin-config.ini:/run/secrets/admin_config
+    ports:
+      - 8000:8000
+    depends_on:
+      - admin-redis
+    networks:
+      - development
+
+  admin-celery:
+    image: smartsleep-admin-backend
+    build:
+      context: ./admin-backend
+    command: celery -A admin worker -l info
+    environment:
+      - LIMESURVEY_SURVEY_ID=${LIMESURVEY_SURVEY_ID}
+      - CSV_DL_URL=${CSV_DL_URL}
+      - DJANGO_DEBUG=${DJANGO_DEBUG}
+    volumes:
+      - "${BASE_DIR}/ssreports:/ssreports"
+      - ./report-builder/config.ini:/run/secrets/db_config
+      - ./secrets/admin-config.ini:/run/secrets/admin_config
+    user: ${REPORT_USER}:${REPORT_USER}
+    depends_on:
+      - admin-redis
+    networks:
+      - development
+
+  admin-redis:
+    image: smartsleep-admin-redis
+    build:
+      context: ./admin-redis
+    command: redis-server --requirepass ${REDIS_PASS}
+    volumes:
+      - admin_redis_data:/var/lib/redis
+    environment:
+      - REDIS_REPLICATION_MODE=master
+    networks:
+      - development
+
+  admin-frontend:
+    image: smartsleep-admin-frontend
+    build:
+      context: ./admin-frontend
+    command: npm start
+    stdin_open: true
+    ports:
+      - 3001:3000
+    networks:
+      - development
+
 networks:
   development:
+
+volumes:
+  admin_redis_data:
 
 secrets:
   activitydb:
@@ -110,4 +191,3 @@ secrets:
     file: .secrets/firebase-adminsdk.json
   limeconfig:
     file: ./secrets/config-development.php
-

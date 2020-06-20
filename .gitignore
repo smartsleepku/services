@@ -1,3 +1,4 @@
 .env
 stack.env
 stack.env.*
+!stack.env.sample
