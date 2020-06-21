@@ -34,7 +34,7 @@ DEBUG = os.environ.get("DJANGO_DEBUG") == 'True'
 
 ALLOWED_HOSTS = ['*']
 
-CSV_OUT_DIR = '/ssreports'
+CSV_OUT_DIR = '/ssreports/new_users'
 CSV_DL_URL = os.environ.get("CSV_DL_URL")
 LIMESURVEY_BASE = 'http://survey'
 LIMESURVEY_PWD = admin_config['admin']['LIMESURVEY_PWD']
