@@ -129,6 +129,7 @@ services:
       - "${BASE_DIR}/ssreports:/ssreports"
       - ./report-builder/config.ini:/run/secrets/db_config
       - ./secrets/admin-config.ini:/run/secrets/admin_config
+    user: ${REPORT_USER}:${REPORT_USER}
     ports:
       - 8000:8000
     depends_on:

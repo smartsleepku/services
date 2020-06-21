@@ -119,6 +119,7 @@ services:
       - CELERY_BACKEND=${CELERY_BACKEND}
     volumes:
       - "${BASE_DIR}/ssreports:/ssreports"
+    user: ${REPORT_USER}:${REPORT_USER}
     ports:
       - 8000:8000
     depends_on:
