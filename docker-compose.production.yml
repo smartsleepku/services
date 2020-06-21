@@ -12,7 +12,7 @@ services:
       - CONFIG_ENV=production
     networks:
       - production
-  
+
   activity:
     image: ku/sund/smartsleep/activity:latest
     build:
@@ -60,15 +60,109 @@ services:
     networks:
       - production
 
+  report-builder:
+    image: smartsleep-report-generator
+    build:
+      context: ./report-builder
+    environment:
+      - USER_ID=${REPORT_USER}
+    volumes:
+      - "${BASE_DIR}/ssreports:/reports"
+    secrets:
+      - db_config
+
+  report-webserver:
+    image: smartsleep-report-webserver
+    build:
+      context: ./report-server
+    volumes:
+      - "${BASE_DIR}/ssreports:/usr/share/nginx/html/reports:ro"
+    ports:
+      - 8082:80
+
+  admin-backend:
+    image: smartsleep-admin-backend
+    build:
+      context: ./admin-backend
+    command: python manage.py runserver 0.0.0.0:8000
+    environment:
+      - LIMESURVEY_SURVEY_ID=${LIMESURVEY_SURVEY_ID}
+      - CSV_DL_URL=${CSV_DL_URL}
+      - DJANGO_DEBUG=${DJANGO_DEBUG}
+      - CELERY_BACKEND=${CELERY_BACKEND}
+    volumes:
+      - "${BASE_DIR}/ssreports:/ssreports"
+    user: ${REPORT_USER}:${REPORT_USER}
+    ports:
+      - 8000:8000
+    depends_on:
+      - admin-redis
+    networks:
+      - production
+    secrets:
+      - db_config
+      - admin_config
+
+  admin-celery:
+    image: smartsleep-admin-backend
+    build:
+      context: ./admin-backend
+    command: celery -A admin worker -l info
+    environment:
+      - LIMESURVEY_SURVEY_ID=${LIMESURVEY_SURVEY_ID}
+      - CSV_DL_URL=${CSV_DL_URL}
+      - DJANGO_DEBUG=${DJANGO_DEBUG}
+      - CELERY_BACKEND=${CELERY_BACKEND}
+    volumes:
+      - "${BASE_DIR}/ssreports:/ssreports"
+    user: ${REPORT_USER}:${REPORT_USER}
+    depends_on:
+      - admin-redis
+    networks:
+      - production
+    secrets:
+      - db_config
+      - admin_config
+
+  admin-redis:
+    image: smartsleep-admin-redis
+    build:
+      context: ./admin-redis
+    command: redis-server --requirepass ${REDIS_PASS}
+    volumes:
+      - admin_redis_data:/var/lib/redis
+    environment:
+      - REDIS_REPLICATION_MODE=master
+    networks:
+      - production
+
+  admin-frontend:
+    image: smartsleep-admin-frontend
+    build:
+      context: ./admin-frontend
+    command: npm start
+    stdin_open: true
+    ports:
+      - 3001:3000
+    networks:
+      - production
 
 networks:
   production:
 
 secrets:
   activitydb:
-    file: ./activity/secrets/database-production.properties
+    # ./activity/secrets/database-production.properties
+    external: true
   fbadminsdk:
-    file: ./secrets/firebase-adminsdk.json
+    # ./secrets/firebase-adminsdk.json
+    external: true
   limeconfig:
-    file: ./secrets/config-production.php
-
+    # ./secrets/config-production.php
+    external: true
+  db_config:
+    # .report-builder/config.ini
+    external: true
+  admin_config:
+    # ./secrets/admin-config.ini
+    external: true
