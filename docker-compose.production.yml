@@ -150,6 +150,9 @@ services:
 networks:
   production:
 
+volumes:
+  admin_redis_data:
+
 secrets:
   activitydb:
     # ./activity/secrets/database-production.properties
