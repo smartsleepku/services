@@ -17,4 +17,7 @@ WORKDIR /usr/src/app
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 COPY . /usr/src/app/
-CMD python
+RUN python manage.py makemigrations
+RUN python manage.py migrate
+RUN sed -i 's/MinProtocol = TLSv1.2/MinProtocol = TLSv1.0/' /etc/ssl/openssl.cnf
+CMD python manage.py runserver
