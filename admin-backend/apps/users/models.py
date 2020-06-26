@@ -177,7 +177,8 @@ class User(models.Model):
                 host=mysql_opts['host'],
                 port=mysql_opts['port'],
                 user=mysql_opts['user'],
-                password=mysql_opts['pwd']
+                password=mysql_opts['pwd'],
+                use_pure=True
             )
             cur = cnx.cursor()
             survey_base,survey_uname,survey_pwd,survey_id = survey_opts['base'],\
